@@ -1,5 +1,3 @@
-// import * as THREE from 'three';
-
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
@@ -12,14 +10,18 @@ const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 const cube = new THREE.Mesh( geometry, material );
 
 
-const axesHelper = new THREE.AxesHelper(100); // Size of the axes
-scene.add(axesHelper);
+
+
+// const axesHelper = new THREE.AxesHelper(100); // Size of the axes
+// scene.add(axesHelper);
+
+
 
 class ForceQuad{
     constructor(){
-        this.x=(Math.random()-0.5)*10
+        this.x=(Math.random()-0.5)*2
         this.y=(Math.random()-0.5)
-        this.z=(Math.random()-0.5)*10
+        this.z=(Math.random()-0.5)*2
     }
 
     update(){
@@ -40,7 +42,20 @@ class ForceQuad{
 class ParticleSystem{
     constructor(count){
         // Initialize a 3x3x3 array filled with zeros
-        this.forceField= new Array(10).fill(null).map(() =>
+        const geometry = new THREE.SphereGeometry(0.01, 32, 32);
+
+    const material = new THREE.MeshBasicMaterial({
+        // color: 0xffa500,       // Base color of the sphere (orange)
+        color: 0xFFFAFA,
+        emissive: 0xFFFAFA,
+        // emissive: 0xffa500,    // Emissive color (same as the base color)
+        emissiveIntensity: 0.4,  // Intensity of the glow
+        metalness: 0.5,        // Some metalness for a shiny effect
+        roughness: 0.3         // Adjust roughness for a smooth but slightly diffused look
+    });
+        
+
+        this.array= new Array(10).fill(null).map(() =>
         new Array(10).fill(null).map(() =>
         new Array(10).fill(0)
             )
@@ -50,19 +65,18 @@ class ParticleSystem{
 
         this.mesh= new THREE.InstancedMesh(geometry,material,count)
         this.dummy=new THREE.Object3D()
-        // let particleData = new Array(count);
         this.particleData = new Array(count).fill(null).map(() => ({
             position: new THREE.Vector3(),
             velocity: new THREE.Vector3(),
             acceleration: new THREE.Vector3(),
             mass: 2, // kg
-            gravity: new THREE.Vector3(0, -0.1, 0)
+            gravity: new THREE.Vector3(0, -0.2, 0)
         }));
 
         for(let i=0;i<10;i++){
             for(let j=0;j<10;j++){
                 for(let k=0;k<10;k++){
-                    this.forceField[i][j][k]=new ForceQuad()
+                    this.array[i][j][k]=new ForceQuad()
                         
                 }
             }
@@ -74,142 +88,308 @@ class ParticleSystem{
             this.mesh.setMatrixAt(i, this.dummy.matrix);
         }
 
-
-
-        // // const dummy = new THREE.Object3D();
-        // for (let i = 0; i < count; i++) {
-        //     this.dummy.position.set(Math.random() * 10, Math.random() * 10, Math.random() * 10);
-        //     this.dummy.updateMatrix();
-        //     this.mesh.setMatrixAt(i, this.dummy.matrix);
-        // }
-
-        
-        // console.log(this.mesh)
         scene.add(this.mesh)
 
         
     }
 
-
-
-    // updateParticles(deltaTime){
-    //     mesh.getMatrixAt(0, dummy.matrix);
-    //     dummy.position.set(i * 2 + Math.sin(Math.random()), 0, 0);
-    //     dummy.updateMatrix();
-    //     // Update the instance's matrix
-    //     mesh.setMatrixAt(i, dummy.matrix);
-
-    //     mesh.instanceMatrix.needsUpdate = true;
-    // }
-
-    // updateParticles(deltaTime) {
-    //     for (let i = 0; i < this.mesh.count; i++) {
-    //         // Retrieve the matrix for the current instance
-    //         this.mesh.getMatrixAt(i, this.dummy.matrix);
+    createParticleAt(index){
+        const data = this.particleData[index];
     
-    //         // Update the position based on unique logic
-    //         this.dummy.position.setFromMatrixPosition(this.dummy.matrix);
-    //         this.dummy.position.x += (Math.random() - 0.5) * deltaTime * 0.01;
-    //         this.dummy.position.y += (Math.random() - 0.5) * deltaTime * 0.01;
-    //         this.dummy.position.z += (Math.random() - 0.5) * deltaTime * 0.01;
-    
-    //         // Update the matrix with the new position
-    //         this.dummy.updateMatrix();
-    //         this.mesh.setMatrixAt(i, this.dummy.matrix);
-    //     }
-    
-    //     // Mark the instance matrix as needing update
-    //     this.mesh.instanceMatrix.needsUpdate = true;
-    // }
+        // Set the initial position of the particle
+        const position = new THREE.Vector3(
+            Math.random() * 10,  // X position within range
+            // Math.random() * 10,  // Y position within range
+            9.99,
+            Math.random() * 10   // Z position within range
+        );
+
+        data.position.copy(position);
+        data.velocity.set(0, 0, 0); // Reset velocity
+        data.acceleration.set(0, 0, 0); // Reset acceleration
+        
+        // Optionally, set initial values for gravity or other properties
+        data.gravity.set(0, -0.5, 0); // Example gravity
+
+        // Update the dummy object's position
+        this.dummy.position.copy(data.position);
+        this.dummy.updateMatrix();
+        
+        // Set the matrix for the instance at the specified index
+        this.mesh.setMatrixAt(index, this.dummy.matrix);
+
+        // Notify Three.js that the instance matrices have changed
+        this.mesh.instanceMatrix.needsUpdate = true;
+    }
+
 
     updateParticles(deltaTime) {
+        const scalar = 0.5;
+    
         for (let i = 0; i < this.count; i++) {
             const data = this.particleData[i];
     
-            // Update the particle's acceleration based on gravity and any forces
-            // For simplicity, forces are omitted in this example
-            data.acceleration.copy(data.gravity);
+            // Get the matrix for the current particle and extract its position
+            this.mesh.getMatrixAt(i, this.dummy.matrix);
+            data.position.setFromMatrixPosition(this.dummy.matrix);
     
-            // Update velocity
-            data.velocity.addScaledVector(data.acceleration, deltaTime * 0.1); // Adjust time scaling as needed
+            // Calculate the indices for the 3D array based on the position
+            const xIndex = Math.floor(data.position.x);
+            const yIndex = Math.floor(data.position.y);
+            const zIndex = Math.floor(data.position.z);
     
-            // Update position
-            data.position.addScaledVector(data.velocity, deltaTime * 0.1); // Adjust time scaling as needed
+            // Ensure indices are within bounds
+            if (xIndex >= 0 && xIndex < 10 && yIndex >= 0 && yIndex < 10 && zIndex >= 0 && zIndex < 10) {
+                // Retrieve the force from the 3D array at the given indices
+                const force = this.array[xIndex][yIndex][zIndex].get(); // Assuming .get() returns a THREE.Vector3
+                
+                // Update the particle's acceleration by adding gravity and the force
+                data.acceleration.copy(data.gravity).addScaledVector(force, scalar);
     
-            // Update the instance matrix
-            this.dummy.position.copy(data.position);
-            this.dummy.updateMatrix();
-            this.mesh.setMatrixAt(i, this.dummy.matrix);
+                // Integrate velocity with the updated acceleration
+                data.velocity.addScaledVector(data.acceleration, deltaTime);
+    
+                // Integrate position with the updated velocity
+                data.position.addScaledVector(data.velocity, deltaTime);
+    
+                // Update the matrix with the new position
+                this.dummy.position.copy(data.position);
+                this.dummy.updateMatrix();
+                this.mesh.setMatrixAt(i, this.dummy.matrix);
+            }
+            else{
+                this.createParticleAt(i)
+
+            }
         }
     
         // Notify Three.js that the instance matrices have changed
-       this.mesh.instanceMatrix.needsUpdate = true;
+        this.mesh.instanceMatrix.needsUpdate = true;
     }
+    
 
 
 }
-let a=new ParticleSystem(100)
 
 
-class Particle{
-    constructor(x,y,z){
-        this.x=x
-        this.y=y
-        this.z=z
-        this.mass=2 //kg
 
-        this.gravity=[0,-0.1,0]
-        this.acceleration=[0,0,0]
-        this.velocity=[0,0,0]
+class MovingParticle{
+    constructor(x,y,z,childrenCount){
+        this.particleCount = childrenCount;
+        this.parentPosition = new THREE.Vector3(x, y, z);
+        this.deltaVelocity=false
+        // this.previousPosition = this.parentPosition.clone();
 
-        const geometry = new THREE.SphereGeometry(0.01, 32, 32); // Radius, width segments, height segments
-        const material = new THREE.MeshBasicMaterial({ color: 0x0077ff }); // Blue sphere
-        this.sphere=new THREE.Mesh(geometry, material);
-        this.sphere.position.x=this.x
-        this.sphere.position.y=this.y
-        this.sphere.position.z=this.z
-        scene.add(this.sphere)
-    }
+        this.parentParticle = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xff0000 }) // Parent particle color
+        );
+        this.parentParticle.position.copy(this.parentPosition);
+        scene.add(this.parentParticle);
 
-    update(deltaTime){
-        // console.log(deltaTime)
-        if(this.sphere.position.x<0 || this.sphere.position.y<0 || this.sphere.position.z<0 
-            || this.sphere.position.x>10 || this.sphere.position.y>10 || this.sphere.position.z>10
-        ){
-            return
+        const geometry = new THREE.SphereGeometry(0.01, 8, 8); // Small spheres for particles
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xffffff, 
+            transparent: true, 
+            opacity: 1.0
+        });
+
+        this.particleMesh = new THREE.InstancedMesh(geometry, material, this.particleCount);
+
+
+        // this.particleData = [];
+        // for (let i = 0; i < this.particleCount; i++) {
+        //     particleData.push({
+        //         position: new THREE.Vector3(Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5),
+        //         velocity: new THREE.Vector3(),
+        //         lifeTime: 0, // To manage fading out
+        //         maxLifeTime: Math.random() * 5 + 5, // Random lifespan
+        //     });
+        // }
+        this.particleData = [];
+        for (let i = 0; i < this.particleCount; i++) {
+            this.particleData.push({
+                // Position each child particle relative to the parent position
+                position: this.parentPosition.clone().add(new THREE.Vector3(
+                    Math.random() * 2 - 1, // X offset from parent
+                    Math.random() * 2 - 1, // Y offset from parent
+                    Math.random() * 2 - 1  // Z offset from parent
+                )),
+                velocity: new THREE.Vector3(), // Initial velocity
+                lifeTime: 0, // To manage fading out
+                maxLifeTime: Math.random() * 5 + 5, // Random lifespan,
+                scale:1.0
+            });
         }
-        // console.log(this.sphere.position.x)
-        // console.log(this.sphere.position.y)
-        // console.log(this.sphere.position.z)
-        const currentForceVector=a.array[Math.floor(this.sphere.position.x)][Math.floor(this.sphere.position.y)][Math.floor(this.sphere.position.z)]
-        // console.log(currentForceVector)
-        const resultant=[currentForceVector.x/this.mass,currentForceVector.y/this.mass,currentForceVector.z/this.mass]
 
-        this.acceleration = [this.gravity[0]+resultant[0], this.gravity[1]+resultant[1], this.gravity[2]+resultant[2]];
-        // console.log(this.acceleration)
-        // Update velocity with acceleration
-        this.velocity[0] += this.acceleration[0] * deltaTime/1000000000000;
-        this.velocity[1] += this.acceleration[1] * deltaTime/1000000000000;
-        this.velocity[2] += this.acceleration[2] * deltaTime/1000000000000;
+        // Set the initial matrix for each instance
+        this.dummy = new THREE.Object3D();
+        for (let i = 0; i < this.particleCount; i++) {
+            this.dummy.position.copy(this.particleData[i].position);
+            this.dummy.scale.set(1, 1, 1);
+            this.dummy.updateMatrix();
+            this.particleMesh.setMatrixAt(i, this.dummy.matrix);
 
-        // Update position with velocity
-        this.sphere.position.x += this.velocity[0] * deltaTime
-        this.sphere.position.y += this.velocity[1] * deltaTime
-        this.sphere.position.z += this.velocity[2] * deltaTime
+        }
 
-        this.x=this.sphere.position.x
-        this.y=this.sphere.position.y
-        this.z=this.sphere.position.z
+        scene.add(this.particleMesh); 
+
+
     }
+
+    moveParent(){
+        this.parentParticle.position.x+=0.01
+        // this.parentParticle.position.y+=0.01
+        const newPosition= new THREE.Vector3(this.parentParticle.position.x,this.parentParticle.position.y,this.parentParticle.position.z)
+        const resultantVector = new THREE.Vector3().subVectors(newPosition, this.parentPosition);
+        this.deltaVelocity=resultantVector
+        this.parentPosition=newPosition
+        // console.log(resultantVector)
+    }
+
+    updateParticles(deltaTime){
+        for (let i = 0; i < this.particleCount; i++) {
+            const data = this.particleData[i];
+    
+            // Update position based on velocity
+            data.position.addScaledVector(data.velocity, deltaTime);
+    
+            // Increase lifetime
+            data.lifeTime += deltaTime;
+            // console.log(this.parentPosition)
+            // Check if the particle is outside the bounding box or has exceeded its lifetime
+            if ( data.lifeTime > data.maxLifeTime) {
+                // Recycle particle
+                // data.position.set(Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5);
+                data.position.set(this.parentPosition.x,this.parentPosition.y,this.parentPosition.z)
+                data.velocity.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+                data.lifeTime = 0;
+            }
+    
+            // Update the instance matrix
+            const dummy = new THREE.Object3D();
+            dummy.position.copy(data.position);
+
+            const ageRatio = data.lifeTime / data.maxLifeTime;
+            const newScale = 1.0 * (1.0 - ageRatio); // Scale reduces linearly over time
+            dummy.scale.set(newScale, newScale, newScale);
+    
+            // Apply fading
+            const opacity = 1 - data.lifeTime / data.maxLifeTime;
+            this.particleMesh.setColorAt(i, new THREE.Color(1, 1, 1).multiplyScalar(opacity));
+    
+            dummy.updateMatrix();
+            this.particleMesh.setMatrixAt(i, dummy.matrix);
+        }
+        // console.log(this.particleMesh)
+        this.particleMesh.instanceMatrix.needsUpdate = true;
+        this.particleMesh.instanceColor.needsUpdate = true;
+
+    }
+
+
 }
 
-// let a=new ParticleEffect(10,10,10,10,10,10)
-// a.createParent()
 
-// scene.add( cube );
+function windMouse3D2(startX, startY, startZ, endX, endY, endZ, G_0=6, W_0=12, M_0=15, D_0=12, stepSize=0.001) {
+    const points = [];
+    let currentX = startX, currentY = startY, currentZ = startZ;
+    let vX = 0, vY = 0, vZ = 0;
+    let W_X = 0, W_Y = 0, W_Z = 0;
+    
+    const distToEnd = (x1, y1, z1, x2, y2, z2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2);
 
-// console.log(scene)
+    while (distToEnd(currentX, currentY, currentZ, endX, endY, endZ) > stepSize) {
+        const dist = distToEnd(currentX, currentY, currentZ, endX, endY, endZ);
+        const W_mag = Math.min(W_0, dist);
 
+        if (dist >= D_0) {
+            W_X = W_X / Math.sqrt(3) + (2 * Math.random() - 1) * W_mag / Math.sqrt(5);
+            W_Y = W_Y / Math.sqrt(3) + (2 * Math.random() - 1) * W_mag / Math.sqrt(5);
+            W_Z = W_Z / Math.sqrt(3) + (2 * Math.random() - 1) * W_mag / Math.sqrt(5);
+        } else {
+            W_X /= Math.sqrt(3);
+            W_Y /= Math.sqrt(3);
+            W_Z /= Math.sqrt(3);
+            if (M_0 < 3) {
+                M_0 = Math.random() * 3 + 3;
+            } else {
+                M_0 /= Math.sqrt(5);
+            }
+        }
+
+        const dirX = endX - currentX;
+        const dirY = endY - currentY;
+        const dirZ = endZ - currentZ;
+        const dirMag = Math.sqrt(dirX ** 2 + dirY ** 2 + dirZ ** 2);
+        
+        const normDirX = dirX / dirMag;
+        const normDirY = dirY / dirMag;
+        const normDirZ = dirZ / dirMag;
+
+        vX += W_X + G_0 * normDirX;
+        vY += W_Y + G_0 * normDirY;
+        vZ += W_Z + G_0 * normDirZ;
+        
+        const vMag = Math.sqrt(vX ** 2 + vY ** 2 + vZ ** 2);
+        if (vMag > M_0) {
+            const vClip = M_0 / 2 + Math.random() * M_0 / 2;
+            vX = (vX / vMag) * vClip;
+            vY = (vY / vMag) * vClip;
+            vZ = (vZ / vMag) * vClip;
+        }
+
+        currentX += vX * stepSize;
+        currentY += vY * stepSize;
+        currentZ += vZ * stepSize;
+
+        points.push(new THREE.Vector3(currentX, currentY, currentZ));
+    }
+
+    points.push(new THREE.Vector3(endX, endY, endZ)); // Ensure the endpoint is added
+
+    return points;
+}
+
+
+
+// const points = [];
+// const numPoints = 10000;
+// for (let i = 0; i < numPoints; i++) {
+//     points.push(new THREE.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10));
+// }
+
+
+let path=[]
+
+function createLightning3D(startX, startY, startZ, endX, endY, endZ) {
+    const points = windMouse3D2(startX, startY, startZ, endX, endY, endZ);
+    // console.log(points.length)
+    path=points
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+        color: 0x00ffff, // Lightning color
+        linewidth: 40,
+        blending: THREE.AdditiveBlending,
+        opacity: 0.8,
+        transparent: true
+    });
+
+    const lightning = new THREE.Line(geometry, material);
+    // console.log(lightning)
+    scene.add(lightning);
+
+
+}
+
+
+
+// Example usage: create a lightning effect from (0, 0, 0) to (10, 10, 10)
+// createLightning3D(0, 0, 0, 5, 10, 5);
+
+
+// let a=new ParticleSystem(10000)
+let b=new MovingParticle(5,5,5,1000)
 
 
 
@@ -222,150 +402,36 @@ controls.enableDamping = true; // Smooth camera movement
 controls.dampingFactor = 0.05;
 controls.enableZoom = true; // Allow zooming
 
-// let p=new Particle(5,5,5)
-
-// let particles=[]
-
-// for(let i=0;i<10000;i++){
-//     const p=new Particle(Math.random()*10,Math.random()*10,Math.random()*10)
-//     particles.push(p)
-// }
-
-// const particleCount = 10000;
-// const particles = new THREE.InstancedMesh(
-//     new THREE.SphereGeometry(0.01, 32, 32),
-//     new THREE.MeshBasicMaterial({ color: 0x0077ff }),
-//     particleCount
-// );
-
-
-// const dummy = new THREE.Object3D();
-// for (let i = 0; i < particleCount; i++) {
-//     dummy.position.set(Math.random() * 10, Math.random() * 10, Math.random() * 10);
-//     dummy.updateMatrix();
-//     particles.setMatrixAt(i, dummy.matrix);
-// }
-// scene.add(particles);
-// const particleGeometry = new THREE.SphereGeometry(0.01, 8, 8); // Reduced segments for performance
-// const particleMaterial = new THREE.MeshBasicMaterial({ color: 0x0077ff });
-
-// // Create InstancedMesh
-// const particleCount = 10000;
-// const instancedMesh = new THREE.InstancedMesh(particleGeometry, particleMaterial, particleCount);
-// scene.add(instancedMesh);
-
-
-// const dummy = new THREE.Object3D();
-
-
-// const particles = [];
-// for (let i = 0; i < particleCount; i++) {
-//     // Random initial positions
-//     const x = Math.random() * 10;
-//     const y = Math.random() * 10;
-//     const z = Math.random() * 10;
-
-//     dummy.position.set(x, y, z);
-//     dummy.updateMatrix();
-//     instancedMesh.setMatrixAt(i, dummy.matrix);
-
-//     particles.push({
-//         velocity: new THREE.Vector3(
-//             (Math.random() - 0.5) * 0.1,
-//             (Math.random() - 0.5) * 0.1,
-//             (Math.random() - 0.5) * 0.1
-//         ),
-//         acceleration: new THREE.Vector3(),
-//         matrix: new THREE.Matrix4()
-//     });
-// }
-
-// function getParticlePosition(index) {
-//     if (index < 0 || index >= particles.length) {
-//         console.error('Index out of bounds');
-//         return null;
-//     }
-
-//     // Get the matrix of the instance
-//     const matrix = new THREE.Matrix4();
-//     instancedMesh.getMatrixAt(index, matrix);
-
-//     // Decompose the matrix to get the position
-//     const position = new THREE.Vector3();
-//     matrix.decompose(position, new THREE.Quaternion(), new THREE.Vector3());
-
-//     return position;
-// }
-
-// function updateParticles(deltaTime) {
-//     for (let i = 0; i < particleCount; i++) {
-//         const particle = particles[i];
-//         instancedMesh.getMatrixAt(i, particle.matrix);
-//         const f=getParticlePosition(i)
-
-//         if (f.x < 0 || f.y < 0 || f.z < 0 
-//             || f.x > 10 || f.y > 10 || f.z > 10) {
-//             continue; // Skip updating this particle
-//         }
-//         else{
-//             console.log('yo')
-//         }
-
-//         const position = new THREE.Vector3().setFromMatrixPosition(particle.matrix);
-//         const force = a.array[Math.floor(position.x)][Math.floor(position.y)][Math.floor(position.z)];
-//         // console.log(force)
-//         const resultant = new THREE.Vector3(force.x / 2, force.y / 2, force.z / 2); // Adjusted for mass
-        
-//         particle.acceleration.set(0, -0.1, 0).add(resultant); // Gravity added
-//         particle.velocity.addScaledVector(particle.acceleration, deltaTime);
-//         position.addScaledVector(particle.velocity, deltaTime);
-
-//         // Update matrix
-//         particle.matrix.setPosition(position);
-//         instancedMesh.setMatrixAt(i, particle.matrix);
-//     }
-// }
-
-// function updateParticles(deltaTime) {
-//     for (let i = 0; i < particleCount; i++) {
-//         // Update position based on velocity or forces
-//         // (For simplicity, let's assume a dummy update here)
-//         dummy.position.x += (Math.random() - 0.5) * 0.01;
-//         dummy.position.y += (Math.random() - 0.5) * 0.01;
-//         dummy.position.z += (Math.random() - 0.5) * 0.01;
-        
-//         dummy.updateMatrix();
-//         particles.setMatrixAt(i, dummy.matrix);
-//     }
-// }
-
-// let lastFrameTime = performance.now();
-
-// Check if the extension is supported
-
 const clock = new THREE.Clock();
 
+let index=0
+
 function animate() {
+    index++
+    // console.log(index)
+
+    // camera.position.x=path[index].x
+    // camera.position.y=path[index].y
+    // camera.position.z=path[index].z
+
+
+
     const deltaTime = clock.getDelta();
-    // const currentFrameTime = performance.now();
-    // const deltaTime1 = currentFrameTime - lastFrameTime;
-    // lastFrameTime = currentFrameTime;
 
-    // console.log(`Time since last frame: ${deltaTime1.toFixed(2)} ms`);
-    // const deltaTime = clock.getDelta();
-    
-    // updateParticles(deltaTime);
 
-    a.updateParticles(deltaTime)
+
+    // a.updateParticles(deltaTime)
+    b.updateParticles(deltaTime)
+    b.moveParent()
+
+    // requestAnimationFrame(animateLightning);
 	renderer.render( scene, camera );
     requestAnimationFrame(animate);
 
-    // for(let i=0;i<10000;i++){
-    //     particles[i].update(deltaTime)
-    // }
+
     
 }
-// renderer.setAnimationLoop( animate );
+
 animate()
 
 
