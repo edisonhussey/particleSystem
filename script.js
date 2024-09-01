@@ -1,5 +1,5 @@
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 5000 );
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
@@ -12,8 +12,8 @@ const cube = new THREE.Mesh( geometry, material );
 
 
 
-// const axesHelper = new THREE.AxesHelper(100); // Size of the axes
-// scene.add(axesHelper);
+const axesHelper = new THREE.AxesHelper(100); // Size of the axes
+scene.add(axesHelper);
 
 
 
@@ -187,7 +187,7 @@ class MovingParticle{
         this.parentParticle.position.copy(this.parentPosition);
         scene.add(this.parentParticle);
 
-        const geometry = new THREE.SphereGeometry(0.01, 8, 8); // Small spheres for particles
+        const geometry = new THREE.SphereGeometry(0.3, 8, 8); // Small spheres for particles
         const material = new THREE.MeshBasicMaterial({
             color: 0xffffff, 
             transparent: true, 
@@ -217,7 +217,7 @@ class MovingParticle{
                 )),
                 velocity: new THREE.Vector3(), // Initial velocity
                 lifeTime: 0, // To manage fading out
-                maxLifeTime: Math.random() * 5 + 5, // Random lifespan,
+                maxLifeTime: Math.random() * 15 , // Random lifespan,
                 scale:1.0
             });
         }
@@ -237,11 +237,15 @@ class MovingParticle{
 
     }
 
-    moveParent(){
-        this.parentParticle.position.x+=0.01
+    moveParent(x,y,z){
+        this.parentParticle.position.x+=x
+        this.parentParticle.position.y+=y
+        this.parentParticle.position.z+=z
         // this.parentParticle.position.y+=0.01
         const newPosition= new THREE.Vector3(this.parentParticle.position.x,this.parentParticle.position.y,this.parentParticle.position.z)
-        const resultantVector = new THREE.Vector3().subVectors(newPosition, this.parentPosition);
+        let resultantVector = new THREE.Vector3().subVectors(newPosition, this.parentPosition);
+        // const resultantVector = new THREE.Vector3().subVectors(this.parentPosition,newPosition);
+        // resultantVector = resultantVector.clone().negate();
         this.deltaVelocity=resultantVector
         this.parentPosition=newPosition
         // console.log(resultantVector)
@@ -262,7 +266,15 @@ class MovingParticle{
                 // Recycle particle
                 // data.position.set(Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5);
                 data.position.set(this.parentPosition.x,this.parentPosition.y,this.parentPosition.z)
-                data.velocity.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+                // data.velocity.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+                if(this.deltaVelocity){
+                    // console.log(this.deltaVelocity)
+                    data.velocity.set(25*this.deltaVelocity.x+Math.random()-.5,25*this.deltaVelocity.y+Math.random()-.5,25*this.deltaVelocity.z+Math.random()-.5)
+                }
+                else{
+                    // console.log('hi')
+                    data.velocity.set(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+                }
                 data.lifeTime = 0;
             }
     
@@ -353,43 +365,10 @@ function windMouse3D2(startX, startY, startZ, endX, endY, endZ, G_0=6, W_0=12, M
 
 
 
-// const points = [];
-// const numPoints = 10000;
-// for (let i = 0; i < numPoints; i++) {
-//     points.push(new THREE.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10));
-// }
-
-
-let path=[]
-
-function createLightning3D(startX, startY, startZ, endX, endY, endZ) {
-    const points = windMouse3D2(startX, startY, startZ, endX, endY, endZ);
-    // console.log(points.length)
-    path=points
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const material = new THREE.LineBasicMaterial({
-        color: 0x00ffff, // Lightning color
-        linewidth: 40,
-        blending: THREE.AdditiveBlending,
-        opacity: 0.8,
-        transparent: true
-    });
-
-    const lightning = new THREE.Line(geometry, material);
-    // console.log(lightning)
-    scene.add(lightning);
-
-
-}
-
-
-
-// Example usage: create a lightning effect from (0, 0, 0) to (10, 10, 10)
-// createLightning3D(0, 0, 0, 5, 10, 5);
 
 
 // let a=new ParticleSystem(10000)
-let b=new MovingParticle(5,5,5,1000)
+let b=new MovingParticle(5,5,5,5000)
 
 
 
@@ -405,6 +384,87 @@ controls.enableZoom = true; // Allow zooming
 const clock = new THREE.Clock();
 
 let index=0
+
+
+class Rocket {
+    constructor(startPosition, targetPosition, height, object) {
+        this.position = startPosition.clone();
+
+
+        this.MovingParticle=object
+
+
+        this.targetPosition = targetPosition.clone();
+        this.height = height;
+
+        // Calculate the base velocity vector
+        this.velocity = new THREE.Vector3().subVectors(this.targetPosition, this.position).normalize();
+        this.totalDistance = this.position.distanceTo(this.targetPosition);
+
+        // Track the elapsed time or distance traveled
+        this.elapsedTime = 0;
+        this.duration = 25; // Total time to reach the target
+    }
+
+    move(deltaTime) {
+        // this.MovingParticle.moveParent()
+
+        this.elapsedTime += deltaTime;
+
+        // Calculate the progress as a percentage of the total duration
+        const t = this.elapsedTime / this.duration;
+
+        // Basic parabolic height adjustment
+        const parabolicFactor = 4 * this.height * t * (1 - t);
+
+        // Add parabolic movement
+        const dx= this.velocity.x * deltaTime;
+        const dz= this.velocity.z * deltaTime;
+        const dy =parabolicFactor;
+
+        // Adding variation
+        const variationMagnitude = 0.01;
+        // this.position.x +=
+        const dx1 = (Math.random() - 0.5) * variationMagnitude;
+        const dy1 =  (Math.random() - 0.5) * variationMagnitude;
+        const dz1 = (Math.random() - 0.5) * variationMagnitude;
+
+        this.position.x+dx+dx1
+        this.position.y+=dy+dy1
+        this.position.z+=dz+dz1
+        console.log(this.position)
+
+        this.MovingParticle.moveParent(dx+dx1,dy+dy1,dz+dz1)
+        // Update the rocket's position in the scene
+        // rocketMesh.position.copy(this.position);
+
+        // Optional: Adjust rocket orientation to face the movement direction
+        // rocketMesh.lookAt(this.targetPosition);
+    }
+}
+
+let c=new Rocket(new THREE.Vector3(0,0,0),new THREE.Vector3(50,40,500),0.1,b)
+
+const loader = new THREE.FontLoader();
+loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+    const geometry = new THREE.TextGeometry('Hallo mate', {
+        font: font,
+        size: 1,
+        height: 0.1,
+        bevelEnabled: true,
+        bevelThickness: 0.02,
+        bevelSize: 0.05,
+        bevelOffset: 0,
+        bevelSegments: 3
+    });
+
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const textMesh = new THREE.Mesh(geometry, material);
+    scene.add(textMesh);
+
+    // Center the text
+    geometry.center();
+});
 
 function animate() {
     index++
@@ -422,9 +482,20 @@ function animate() {
 
     // a.updateParticles(deltaTime)
     b.updateParticles(deltaTime)
-    b.moveParent()
+    c.move(deltaTime)
+    // if(index/1000){
+    // b.moveParent(Math.sin(index/1000)/10,Math.sin(index/1000)/10,Math.sin(index/1000)/10)
 
-    // requestAnimationFrame(animateLightning);
+
+    // camera.position.x=b.parentPosition.x+.8
+    // camera.position.y=b.parentPosition.y+1
+    // camera.position.z=b.parentPosition.z+1.5
+    // console.log(b.parentParticle.position,'duo')
+    controls.target.copy(b.parentParticle.position);
+    controls.update();
+
+
+
 	renderer.render( scene, camera );
     requestAnimationFrame(animate);
 
