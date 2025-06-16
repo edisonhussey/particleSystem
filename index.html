@@ -3,34 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js 3D World</title>
+    <title>Three.js 3D Wsorld</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; 
-        cursor: none;}
-        #editable-container {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 10px;
-            background-color: rgba(240, 240, 240, 0.8);
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            z-index: 1000; /* Ensures it’s above other elements */
-            max-width: 300px;
-            font-size: 16px;
-        }
+        /* cursor: none; */
+    }
+        /* #editable-container { */
+            /* position: absolute; */
+            /* top: 10px; */
+            /* right: 10px; */
+            /* padding: 10px; */
+            /* background-color: rgba(240, 240, 240, 0.8); */
+            /* border: 1px solid #ccc; */
+            /* border-radius: 5px; */
+            /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
+            /* z-index: 1000; Ensures it’s above other elements */
+            /* max-width: 300px; */
+            /* font-size: 16px; */
+        /* } */
     </style>
 </head>
 <body>
-    <p id="editable-container">Click to edit this text</p>
+    <!-- <p id="editable-container">Click to edit this text</p> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/FlyControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/noisejs/0.0.3/noise.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.min.js"></script>
 
+    <!-- test -->
+     <!-- <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+
+     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/Pass.js"></script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+     
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+
+    <!-- gsap -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+
+   
 
     <!-- <script src="https://cdn.jsdelivr.net/npm/simplex-noise"></script> -->
 
@@ -40,6 +64,7 @@
 
 
     <script type="module" src="script.js"> </script>
+    <!-- <script type="module" src="loader/loader.js"></script> -->
 
     <!-- <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script> -->
     <!-- <script src="https://threejs.org/examples/js/controls/FlyControls.js"></script>
